@@ -1,0 +1,50 @@
+[
+  {
+    "id": "792d9c63",
+    "timestamp": "2026-05-22T08:02:03.193595",
+    "detection_id": "e31b735aca",
+    "result_url": "/results/e31b735aca_annotated.jpg",
+    "target": "cat",
+    "vote": "incorrect",
+    "reason": "partial_object",
+    "comment": "",
+    "count": 0,
+    "mode": "yolo_class"
+  },
+  {
+    "id": "93d1b7dd",
+    "timestamp": "2026-05-22T08:03:44.571726",
+    "detection_id": "f534d16afa",
+    "result_url": "/results/f534d16afa_annotated.jpg",
+    "target": "",
+    "vote": "incorrect",
+    "reason": "",
+    "comment": "cat no dog",
+    "count": 3,
+    "mode": "yolo_all"
+  },
+  {
+    "id": "0d605e38",
+    "timestamp": "2026-05-22T08:10:34.526774",
+    "detection_id": "261d105422",
+    "result_url": "/results/261d105422_annotated.jpg",
+    "target": "car",
+    "vote": "correct",
+    "reason": "",
+    "comment": "",
+    "count": 1,
+    "mode": "yolo_class"
+  },
+  {
+    "id": "a8ea271a",
+    "timestamp": "2026-05-22T15:17:03.105984",
+    "detection_id": "1457e2b0b3",
+    "result_url": "/results/1457e2b0b3_annotated.jpg",
+    "target": "dog",
+    "vote": "incorrect",
+    "reason": "",
+    "comment": "manque d'autre chiens",
+    "count": 2,
+    "mode": "yolo_class"
+  }
+]

@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VisionAI · Annotation YOLO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    /* ── Bannière résultat OUI / NON ─────────────────────── */
+    .main-answer {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 2px solid transparent;
+      animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .main-answer.found {
+      background: rgba(57, 255, 133, 0.08);
+      border-color: #39ff85;
+      box-shadow: 0 0 28px rgba(57, 255, 133, 0.15);
+    }
+
+    .main-answer.notfound {
+      background: rgba(255, 77, 109, 0.08);
+      border-color: #ff4d6d;
+      box-shadow: 0 0 28px rgba(255, 77, 109, 0.15);
+    }
+
+    .main-answer__icon {
+      font-size: 2.2rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .main-answer__body {
+      flex: 1;
+    }
+
+    .main-answer__title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+
+    .main-answer.found .main-answer__title {
+      color: #39ff85;
+    }
+
+    .main-answer.notfound .main-answer__title {
+      color: #ff4d6d;
+    }
+
+    .main-answer__sub {
+      font-size: 0.78rem;
+      color: #6b7590;
+    }
+
+    /* ── Chips Roboflow (orange) ─────────────────────────── */
+    .chip--rf {
+      border-color: #fb923c44;
+      color: #fb923c;
+    }
+
+    .chip--rf:hover,
+    .chip--rf.chip--active {
+      border-color: #fb923c;
+      background: rgba(251, 146, 60, 0.1);
+      color: #fb923c;
+    }
+
+    .mode-dot--rf {
+      background: #fb923c;
+      box-shadow: 0 0 6px #fb923c;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(0.92) translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="noise-overlay" aria-hidden="true"></div>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="2" />
+            <circle cx="20" cy="20" r="7" fill="currentColor" />
+            <circle cx="23" cy="17" r="2.5" fill="var(--bg)" />
+            <line x1="2" y1="20" x2="8" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <line x1="32" y1="20" x2="38" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </span>
+        <span class="brand-name">Vision<em>AI</em></span>
+      </div>
+      <div class="model-badge">
+        <span class="pulse-dot" aria-hidden="true"></span>
+        YOLOv8 · Actif
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <p class="hero-kicker">Projet Universitaire · Traitement d'Image</p>
+    <h1 class="hero-title">Annotation Intelligente<br /><span class="hero-accent">par Bounding Boxes</span></h1>
+    <p class="hero-sub">Uploadez une image et recherchez un objet — VisionAI détecte et annote automatiquement.</p>
+  </section>
+
+  <!-- DASHBOARD -->
+  <main class="dashboard">
+
+    <!-- ══ COLONNE GAUCHE ══ -->
+    <div class="panel panel--upload">
+
+      <div class="panel-header">
+        <span class="panel-icon">⬆</span>
+        <h2 class="panel-title">Image Source</h2>
+      </div>
+
+      <!-- Zone drag & drop -->
+      <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Zone de dépôt">
+        <img id="previewImg" class="preview-img hidden" alt="Prévisualisation" />
+        <div class="drop-placeholder" id="dropPlaceholder">
+          <div class="drop-icon" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4" y="12" width="56" height="40" rx="4" stroke="currentColor" stroke-width="2" />
+              <circle cx="22" cy="27" r="5" stroke="currentColor" stroke-width="2" />
+              <path d="M4 42l14-12 10 10 10-8 14 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <path d="M32 4v16M26 8l6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </div>
+          <p class="drop-text">Glissez-déposez une image ici</p>
+          <p class="drop-sub">ou cliquez pour parcourir</p>
+          <p class="drop-formats">JPG · PNG · WEBP · BMP</p>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" class="file-input-hidden" aria-hidden="true" />
+      </div>
+
+      <!-- Infos fichier -->
+      <div class="file-info hidden" id="fileInfo">
+        <span class="file-info-icon">🖼</span>
+        <div class="file-info-text">
+          <span id="fileName" class="file-name">—</span>
+          <span id="fileSize" class="file-size">—</span>
+        </div>
+        <button class="btn-clear" id="btnClear">✕</button>
+      </div>
+
+      <!-- Section recherche -->
+      <div class="search-section">
+
+        <div class="search-header">
+          <span class="search-icon">
+            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.8" />
+              <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </span>
+          <label class="search-label" for="targetInput">Quel objet rechercher ?</label>
+          <span class="search-optional">optionnel</span>
+        </div>
+
+        <div class="search-input-wrap">
+          <input type="text" id="targetInput" class="search-input" placeholder="Ex : voiture, chien, car, arbre, tree…"
+            autocomplete="off" spellcheck="false" />
+          <button class="search-clear hidden" id="searchClear" aria-label="Effacer">✕</button>
+        </div>
+
+        <!-- Chips COCO -->
+        <div class="search-chips">
+          <span class="chips-label">Classes COCO :</span>
+          <button class="chip" data-val="person">personne</button>
+          <button class="chip" data-val="car">voiture</button>
+          <button class="chip" data-val="dog">chien</button>
+          <button class="chip" data-val="cat">chat</button>
+          <button class="chip" data-val="bottle">bouteille</button>
+          <button class="chip" data-val="chair">chaise</button>
+          <button class="chip" data-val="cell phone">téléphone</button>
+          <button class="chip" data-val="bicycle">vélo</button>
+        </div>
+
+        <!-- Chips Roboflow (arbres) -->
+        <div class="search-chips">
+          <span class="chips-label" style="color:#fb923c">🌳 Arbres :</span>
+          <button class="chip chip--rf" data-val="arbre">arbre</button>
+          <button class="chip chip--rf" data-val="tree">tree</button>
+          <button class="chip chip--rf" data-val="arbres">arbres</button>
+          <button class="chip chip--rf" data-val="palmier">palmier</button>
+          <button class="chip chip--rf" data-val="forêt">forêt</button>
+        </div>
+
+        <!-- Slider confiance -->
+        <div class="conf-row">
+          <label class="conf-label" for="confSlider">Confiance min.</label>
+          <div class="conf-slider-wrap">
+            <input type="range" id="confSlider" min="5" max="90" value="25" step="5" />
+            <span class="conf-value" id="confValue">25%</span>
+          </div>
+        </div>
+
+        <!-- Indicateur de mode -->
+        <div class="mode-indicator" id="modeIndicator">
+          <span class="mode-dot mode-dot--all"></span>
+          <span id="modeText">Mode : détection de <strong>tous les objets</strong></span>
+        </div>
+
+      </div><!-- /search-section -->
+
+      <!-- Bouton détecter -->
+      <button class="btn-detect" id="btnDetect" disabled>
+        <span class="btn-detect__icon">◉</span>
+        <span class="btn-detect__label">Détecter les objets</span>
+        <span class="btn-detect__spinner hidden"></span>
+      </button>
+
+      <!-- Barre de progression -->
+      <div class="progress-bar-wrap hidden" id="progressWrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+
+      <!-- Bannière résultat OUI / NON -->
+      <div class="main-answer hidden" id="mainAnswer">
+        <div class="main-answer__icon" id="mainAnswerIcon">✅</div>
+        <div class="main-answer__body">
+          <div class="main-answer__title" id="mainAnswerTitle">—</div>
+          <div class="main-answer__sub" id="mainAnswerSub">—</div>
+        </div>
+      </div>
+
+      <!-- Statut -->
+      <p class="status-msg" id="statusMsg" aria-live="polite"></p>
+
+    </div><!-- /panel--upload -->
+
+
+    <!-- ══ COLONNE DROITE ══ -->
+    <div class="panel panel--result">
+
+      <div class="panel-header">
+        <span class="panel-icon">◈</span>
+        <h2 class="panel-title">Résultat</h2>
+        <span class="detection-count hidden" id="detectionCount">0 objets</span>
+      </div>
+
+      <!-- Image annotée -->
+      <div class="result-img-wrap" id="resultImgWrap">
+        <div class="result-placeholder" id="resultPlaceholder">
+          <div class="result-placeholder-grid" aria-hidden="true"></div>
+          <p>Le résultat apparaîtra ici</p>
+        </div>
+        <img id="resultImg" class="result-img hidden" alt="Image annotée par YOLOv8" />
+      </div>
+
+      <!-- Métriques -->
+      <div class="metrics hidden" id="metrics">
+        <div class="metric">
+          <span class="metric-value" id="metricCount">—</span>
+          <span class="metric-label">Détections</span>
+        </div>
+        <div class="metric">
+          <span class="metric-value" id="metricTime">—</span>
+          <span class="metric-label">Temps (s)</span>
+        </div>
+        <div class="metric">
+          <span class="metric-value" id="metricConf">—</span>
+          <span class="metric-label">Conf. moy.</span>
+        </div>
+      </div>
+
+      <!-- Liste des objets détectés -->
+      <div class="detections-list hidden" id="detectionsList">
+        <h3 class="detections-title">Objets détectés</h3>
+        <ul class="detections-ul" id="detectionsUl"></ul>
+      </div>
+
+      <!-- Actions -->
+      <div class="result-actions hidden" id="resultActions">
+        <a class="btn-download" id="btnDownload" href="#" download>
+          <span>↓</span> Télécharger
+        </a>
+        <button class="btn-compare" id="btnCompare">
+          <span>⇄</span> Comparer
+        </button>
+      </div>
+
+    </div><!-- /panel--result -->
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <p>Système Intelligent d'Annotation d'Images — <strong>YOLOv8 + FastAPI</strong> — Projet Universitaire 2024</p>
+    <p class="footer-tech">
+      <span>Python</span><span>FastAPI</span><span>Ultralytics</span><span>OpenCV</span><span>Roboflow</span>
+    </p>
+  </footer>
+
+
+  <script>
+    // ── Références DOM ──────────────────────────────────────────
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+    const previewImg = document.getElementById("previewImg");
+    const dropPlaceholder = document.getElementById("dropPlaceholder");
+    const fileInfo = document.getElementById("fileInfo");
+    const fileName = document.getElementById("fileName");
+    const fileSize = document.getElementById("fileSize");
+    const btnClear = document.getElementById("btnClear");
+    const btnDetect = document.getElementById("btnDetect");
+    const statusMsg = document.getElementById("statusMsg");
+    const progressWrap = document.getElementById("progressWrap");
+    const progressBar = document.getElementById("progressBar");
+    const targetInput = document.getElementById("targetInput");
+    const searchClear = document.getElementById("searchClear");
+    const confSlider = document.getElementById("confSlider");
+    const confValue = document.getElementById("confValue");
+    const modeIndicator = document.getElementById("modeIndicator");
+    const modeText = document.getElementById("modeText");
+    const chips = document.querySelectorAll(".chip");
+
+    const mainAnswer = document.getElementById("mainAnswer");
+    const mainAnswerIcon = document.getElementById("mainAnswerIcon");
+    const mainAnswerTitle = document.getElementById("mainAnswerTitle");
+    const mainAnswerSub = document.getElementById("mainAnswerSub");
+
+    const resultImg = document.getElementById("resultImg");
+    const resultPlaceholder = document.getElementById("resultPlaceholder");
+    const resultActions = document.getElementById("resultActions");
+    const btnDownload = document.getElementById("btnDownload");
+    const btnCompare = document.getElementById("btnCompare");
+    const metrics = document.getElementById("metrics");
+    const metricCount = document.getElementById("metricCount");
+    const metricTime = document.getElementById("metricTime");
+    const metricConf = document.getElementById("metricConf");
+    const detectionCount = document.getElementById("detectionCount");
+    const detectionsList = document.getElementById("detectionsList");
+    const detectionsUl = document.getElementById("detectionsUl");
+
+    // ── État ────────────────────────────────────────────────────
+    let selectedFile = null;
+    let originalSrc = null;
+    let annotatedSrc = null;
+    let compareMode = false;
+
+    const TREE_KEYWORDS = ["arbre", "arbres", "tree", "trees", "palmier", "forêt", "forest", "sapin", "pin", "chêne"];
+
+    // ── Utilitaires ─────────────────────────────────────────────
+    const show = el => el.classList.remove("hidden");
+    const hide = el => el.classList.add("hidden");
+    const fmt = b => b < 1024 ? `${b} o`
+      : b < 1048576 ? `${(b / 1024).toFixed(1)} Ko`
+        : `${(b / 1048576).toFixed(1)} Mo`;
+
+    function setStatus(msg, type) {
+      statusMsg.textContent = msg;
+      statusMsg.className = `status-msg ${type ? "status-" + type : ""}`;
+    }
+    function startProgress() {
+      show(progressWrap);
+      progressBar.style.width = "0%";
+      setTimeout(() => progressBar.style.width = "80%", 50);
+    }
+    function endProgress() {
+      progressBar.style.width = "100%";
+      setTimeout(() => hide(progressWrap), 600);
+    }
+
+    // ── Indicateur de mode ──────────────────────────────────────
+    function updateMode() {
+      const val = targetInput.value.trim();
+      const dot = modeIndicator.querySelector(".mode-dot");
+
+      if (!val) {
+        dot.className = "mode-dot mode-dot--all";
+        modeText.innerHTML = `Mode : détection de <strong>tous les objets</strong>`;
+        hide(searchClear);
+        return;
+      }
+
+      show(searchClear);
+      const isTree = TREE_KEYWORDS.some(kw => val.toLowerCase().includes(kw));
+
+      if (isTree) {
+        dot.className = "mode-dot mode-dot--rf";
+        modeText.innerHTML = `Mode : <span style="color:#fb923c">🌳 Roboflow</span> — détection d'arbres`;
+      } else {
+        dot.className = "mode-dot mode-dot--target";
+        modeText.innerHTML = `Mode : YOLO — recherche de <strong>« ${val} »</strong>`;
+      }
+    }
+
+    // ── Chargement fichier ──────────────────────────────────────
+    function loadFile(file) {
+      if (!file || !file.type.startsWith("image/")) {
+        setStatus("❌ Fichier image invalide.", "error"); return;
+      }
+      selectedFile = file;
+      fileName.textContent = file.name;
+      fileSize.textContent = fmt(file.size);
+      show(fileInfo);
+      const reader = new FileReader();
+      reader.onload = e => {
+        previewImg.src = e.target.result;
+        show(previewImg);
+        hide(dropPlaceholder);
+      };
+      reader.readAsDataURL(file);
+      btnDetect.disabled = false;
+      setStatus("Image prête. Cliquez sur « Détecter les objets ».", "info");
+    }
+
+    function clearSelection() {
+      selectedFile = null;
+      fileInput.value = "";
+      previewImg.src = "";
+      hide(previewImg); show(dropPlaceholder); hide(fileInfo);
+      btnDetect.disabled = true;
+      mainAnswer.style.display = "none";
+      setStatus("", "");
+    }
+
+    // ── Détection ───────────────────────────────────────────────
+    async function detectObjects() {
+      if (!selectedFile) return;
+
+      btnDetect.disabled = true;
+      btnDetect.classList.add("loading");
+      show(btnDetect.querySelector(".btn-detect__spinner"));
+      hide(btnDetect.querySelector(".btn-detect__label"));
+      startProgress();
+
+      const target = targetInput.value.trim();
+      const conf = parseInt(confSlider.value) / 100;
+
+      mainAnswer.style.display = "none";
+      setStatus(target ? `⏳ Recherche de « ${target} »…` : "⏳ Analyse en cours…", "info");
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("target", target);
+      formData.append("confidence", conf.toString());
+
+      try {
+        const response = await fetch("/detect", { method: "POST", body: formData });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Erreur serveur.");
+
+        endProgress();
+        showAnswer(data);
+        displayResults(data);
+
+      } catch (err) {
+        endProgress();
+        setStatus(`❌ ${err.message}`, "error");
+      } finally {
+        btnDetect.disabled = false;
+        btnDetect.classList.remove("loading");
+        show(btnDetect.querySelector(".btn-detect__label"));
+        hide(btnDetect.querySelector(".btn-detect__spinner"));
+      }
+    }
+
+    // ── Bannière OUI / NON ──────────────────────────────────────
+    function showAnswer(data) {
+      mainAnswer.style.display = "none";
+
+      // Pas de cible → statut simple
+      if (!data.target_input || data.target_input.trim() === "") {
+        setStatus(`✅ ${data.count} objet(s) détecté(s) en ${data.inference_time}s`, "success");
+        return;
+      }
+
+      const nom = data.target_input;
+
+      if (data.found_target === true) {
+        const nb = data.count;
+        const confs = data.detections.map(d => (d.confidence * 100).toFixed(0));
+        const confMax = Math.max(...confs);
+        const src = data.mode === "roboflow" ? " · 🌳 Roboflow" : " · YOLO";
+
+        mainAnswerIcon.textContent = "✅";
+        mainAnswerTitle.textContent = `OUI — « ${nom} » est dans l'image`;
+        mainAnswerSub.innerHTML = `${nb} détection(s) · confiance ${confMax}%${src}`;
+        mainAnswer.className = "main-answer found";
+        mainAnswer.style.display = "flex";
+
+        setStatus(`✅ « ${nom} » trouvé — ${nb} détection(s)`, "success");
+
+      } else {
+        mainAnswerIcon.textContent = "❌";
+        mainAnswerTitle.textContent = `NON — « ${nom} » n'est pas dans l'image`;
+        mainAnswerSub.innerHTML = `Essayez un seuil plus bas ou vérifiez l'orthographe`;
+        mainAnswer.className = "main-answer notfound";
+        mainAnswer.style.display = "flex";
+
+        setStatus(`❌ « ${nom} » non trouvé`, "error");
+      }
+
+      mainAnswer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    // ── Affichage résultats ─────────────────────────────────────
+    function displayResults(data) {
+      annotatedSrc = data.result_url;
+      originalSrc = data.original_url;
+      compareMode = false;
+
+      resultImg.src = annotatedSrc + "?t=" + Date.now();
+      resultImg.onload = () => {
+        hide(resultPlaceholder);
+        resultImg.classList.remove("hidden");
+        resultImg.classList.add("reveal");
+      };
+
+      const avgConf = data.detections.length
+        ? (data.detections.reduce((s, d) => s + d.confidence, 0) / data.detections.length).toFixed(2)
+        : "—";
+      metricCount.textContent = data.count;
+      metricTime.textContent = data.inference_time;
+      metricConf.textContent = data.count ? avgConf : "—";
+      show(metrics);
+
+      detectionCount.textContent = `${data.count} objet${data.count > 1 ? "s" : ""}`;
+      show(detectionCount);
+
+      // Liste groupée
+      detectionsUl.innerHTML = "";
+      if (!data.detections.length) {
+        detectionsUl.innerHTML = "<li class='det-item det-empty'>Aucune détection.</li>";
+      } else {
+        const grouped = {};
+        data.detections.forEach(d => {
+          if (!grouped[d.class_name]) grouped[d.class_name] = [];
+          grouped[d.class_name].push(d.confidence);
+        });
+        for (const [cls, confs] of Object.entries(grouped)) {
+          const avgC = (confs.reduce((a, b) => a + b, 0) / confs.length * 100).toFixed(0);
+          const li = document.createElement("li");
+          li.className = "det-item";
+          li.innerHTML = `
+          <span class="det-class">${cls}</span>
+          <span class="det-badge">${confs.length}×</span>
+          <div class="det-conf-bar"><div class="det-conf-fill" style="width:${avgC}%"></div></div>
+          <span class="det-conf-num">${avgC}%</span>`;
+          detectionsUl.appendChild(li);
+        }
+      }
+      show(detectionsList);
+
+      const resultFilename = data.result_url.split("/").pop();
+      btnDownload.href = `/download/${resultFilename}`;
+      show(resultActions);
+    }
+
+    // ── Événements ──────────────────────────────────────────────
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("keypress", e => { if (e.key === "Enter" || e.key === " ") fileInput.click(); });
+    fileInput.addEventListener("change", e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+    dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+    dropZone.addEventListener("drop", e => {
+      e.preventDefault(); dropZone.classList.remove("drag-over");
+      if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+    });
+
+    btnClear.addEventListener("click", e => { e.stopPropagation(); clearSelection(); });
+    btnDetect.addEventListener("click", detectObjects);
+
+    btnCompare.addEventListener("click", () => {
+      if (!originalSrc || !annotatedSrc) return;
+      compareMode = !compareMode;
+      resultImg.src = compareMode ? originalSrc : annotatedSrc;
+      btnCompare.textContent = compareMode ? "⇄ Annoté" : "⇄ Comparer";
+    });
+
+    targetInput.addEventListener("input", updateMode);
+    targetInput.addEventListener("keydown", e => { if (e.key === "Enter" && selectedFile) detectObjects(); });
+
+    searchClear.addEventListener("click", () => {
+      targetInput.value = "";
+      updateMode();
+      chips.forEach(c => c.classList.remove("chip--active"));
+      targetInput.focus();
+    });
+
+    chips.forEach(chip => {
+      chip.addEventListener("click", () => {
+        const isActive = chip.classList.contains("chip--active");
+        chips.forEach(c => c.classList.remove("chip--active"));
+        if (isActive) {
+          targetInput.value = "";
+        } else {
+          chip.classList.add("chip--active");
+          targetInput.value = chip.dataset.val;
+        }
+        updateMode();
+        if (selectedFile && !isActive) detectObjects();
+      });
+    });
+
+    confSlider.addEventListener("input", () => { confValue.textContent = confSlider.value + "%"; });
+  </script>
+</body>
+
+</html>
