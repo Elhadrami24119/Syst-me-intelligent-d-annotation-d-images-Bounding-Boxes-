@@ -126,4 +126,4 @@ Ouvrez ensuite : **http://localhost:8000**
 
 ## 📝 Auteurs
 
-Projet Universitaire — Intelligence Artificielle & Vision par Ordinateur — 2024
+Projet Universitaire — Intelligence Artificielle & Vision par Ordinateur — 2025-2026
