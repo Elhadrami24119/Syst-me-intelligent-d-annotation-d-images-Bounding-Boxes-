@@ -3,27 +3,18 @@
 # ============================================================
 # Installation : pip install -r requirements.txt
 
-# Serveur web asynchrone
+# Serveur web
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
-
-# Gestion des templates HTML
 jinja2==3.1.4
-
-# Upload de fichiers multipart
 python-multipart==0.0.9
 
 # Détection d'objets YOLOv8 (80 classes COCO)
 ultralytics==8.2.0
 
-# Manipulation d'images
+# Traitement d'images
 Pillow==10.3.0
 opencv-python-headless>=4.9.0
-
-# Calcul scientifique
 numpy>=1.24.0
 torch>=2.0.0
 torchvision>=0.15.0
-
-# Modèle custom Roboflow (détection d'arbres)
-inference-sdk>=0.9.0

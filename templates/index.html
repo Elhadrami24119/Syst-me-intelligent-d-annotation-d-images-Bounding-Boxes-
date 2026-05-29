@@ -12,6 +12,121 @@
     rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
   <style>
+    /* ── Sélecteur de mode ───────────────────────────────── */
+    .mode-selector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .mode-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 10px;
+      border-radius: 12px;
+      border: 2px solid #252a3a;
+      background: #141720;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Syne', sans-serif;
+    }
+
+    .mode-btn:hover {
+      border-color: #3d4560;
+      background: #1c2030;
+    }
+
+    .mode-btn__icon {
+      font-size: 1.6rem;
+      line-height: 1;
+    }
+
+    .mode-btn__label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #6b7590;
+    }
+
+    .mode-btn__sub {
+      font-size: 0.62rem;
+      color: #3d4560;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    /* Actif — général (cyan) */
+    .mode-btn--general.active {
+      border-color: #00e5ff;
+      background: rgba(0, 229, 255, 0.07);
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.15);
+    }
+
+    .mode-btn--general.active .mode-btn__label {
+      color: #00e5ff;
+    }
+
+    /* Actif — arbres (vert) */
+    .mode-btn--trees.active {
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.07);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+    }
+
+    .mode-btn--trees.active .mode-btn__label {
+      color: #22c55e;
+    }
+
+    /* Actif — maladies (rouge) */
+    .mode-btn--diseases.active {
+      border-color: #f87171;
+      background: rgba(248, 113, 113, 0.07);
+      box-shadow: 0 0 20px rgba(248, 113, 113, 0.15);
+    }
+
+    .mode-btn--diseases.active .mode-btn__label {
+      color: #f87171;
+    }
+
+    /* ── Chips par mode ──────────────────────────────────── */
+    .chips-group {
+      display: none;
+    }
+
+    .chips-group.active {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chip--tree {
+      border-color: #22c55e44;
+      color: #22c55e;
+    }
+
+    .chip--tree:hover,
+    .chip--tree.chip--active {
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.1);
+      color: #22c55e;
+    }
+
+    .chip--disease {
+      border-color: #f8717144;
+      color: #f87171;
+    }
+
+    .chip--disease:hover,
+    .chip--disease.chip--active {
+      border-color: #f87171;
+      background: rgba(248, 113, 113, 0.1);
+      color: #f87171;
+    }
+
     /* ── Bannière résultat OUI / NON ─────────────────────── */
     .main-answer {
       display: flex;
@@ -66,25 +181,6 @@
       color: #6b7590;
     }
 
-    /* ── Chips Roboflow (orange) ─────────────────────────── */
-    .chip--rf {
-      border-color: #fb923c44;
-      color: #fb923c;
-    }
-
-    .chip--rf:hover,
-    .chip--rf.chip--active {
-      border-color: #fb923c;
-      background: rgba(251, 146, 60, 0.1);
-      color: #fb923c;
-    }
-
-    .mode-dot--rf {
-      background: #fb923c;
-      box-shadow: 0 0 6px #fb923c;
-      animation: pulse 2s infinite;
-    }
-
     @keyframes popIn {
       from {
         opacity: 0;
@@ -100,7 +196,6 @@
 </head>
 
 <body>
-
   <div class="noise-overlay" aria-hidden="true"></div>
 
   <!-- HEADER -->
@@ -129,7 +224,7 @@
   <section class="hero">
     <p class="hero-kicker">Projet Universitaire · Traitement d'Image</p>
     <h1 class="hero-title">Annotation Intelligente<br /><span class="hero-accent">par Bounding Boxes</span></h1>
-    <p class="hero-sub">Uploadez une image et recherchez un objet — VisionAI détecte et annote automatiquement.</p>
+    <p class="hero-sub">Choisissez un mode de détection, uploadez une image et lancez l'analyse.</p>
   </section>
 
   <!-- DASHBOARD -->
@@ -139,6 +234,34 @@
     <div class="panel panel--upload">
 
       <div class="panel-header">
+        <span class="panel-icon">⚙</span>
+        <h2 class="panel-title">Mode de Détection</h2>
+      </div>
+
+      <!-- ── Boutons de sélection du mode ── -->
+      <div class="mode-selector">
+
+        <button class="mode-btn mode-btn--general active" data-mode="general" id="btnModeGeneral">
+          <span class="mode-btn__icon">🔍</span>
+          <span class="mode-btn__label">Général</span>
+          <span class="mode-btn__sub">80 classes COCO<br />yolov8n.pt</span>
+        </button>
+
+        <button class="mode-btn mode-btn--trees" data-mode="trees" id="btnModeTrees">
+          <span class="mode-btn__icon">🌳</span>
+          <span class="mode-btn__label">Arbres</span>
+          <span class="mode-btn__sub">Acacia · Mango<br />Olive · Palm</span>
+        </button>
+
+        <button class="mode-btn mode-btn--diseases" data-mode="diseases" id="btnModeDiseases">
+          <span class="mode-btn__icon">🦠</span>
+          <span class="mode-btn__label">Maladies</span>
+          <span class="mode-btn__sub">6 maladies<br />agricoles</span>
+        </button>
+
+      </div>
+
+      <div class="panel-header" style="margin-top:4px">
         <span class="panel-icon">⬆</span>
         <h2 class="panel-title">Image Source</h2>
       </div>
@@ -176,7 +299,6 @@
 
       <!-- Section recherche -->
       <div class="search-section">
-
         <div class="search-header">
           <span class="search-icon">
             <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -184,19 +306,19 @@
               <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
             </svg>
           </span>
-          <label class="search-label" for="targetInput">Quel objet rechercher ?</label>
+          <label class="search-label" for="targetInput">Filtrer par classe</label>
           <span class="search-optional">optionnel</span>
         </div>
 
         <div class="search-input-wrap">
-          <input type="text" id="targetInput" class="search-input" placeholder="Ex : voiture, chien, car, arbre, tree…"
+          <input type="text" id="targetInput" class="search-input" placeholder="Ex : voiture, palm, anthracnose…"
             autocomplete="off" spellcheck="false" />
           <button class="search-clear hidden" id="searchClear" aria-label="Effacer">✕</button>
         </div>
 
-        <!-- Chips COCO -->
-        <div class="search-chips">
-          <span class="chips-label">Classes COCO :</span>
+        <!-- Chips mode général -->
+        <div class="chips-group active" id="chipsGeneral">
+          <span class="chips-label">COCO :</span>
           <button class="chip" data-val="person">personne</button>
           <button class="chip" data-val="car">voiture</button>
           <button class="chip" data-val="dog">chien</button>
@@ -207,14 +329,26 @@
           <button class="chip" data-val="bicycle">vélo</button>
         </div>
 
-        <!-- Chips Roboflow (arbres) -->
-        <div class="search-chips">
-          <span class="chips-label" style="color:#fb923c">🌳 Arbres :</span>
-          <button class="chip chip--rf" data-val="arbre">arbre</button>
-          <button class="chip chip--rf" data-val="tree">tree</button>
-          <button class="chip chip--rf" data-val="arbres">arbres</button>
-          <button class="chip chip--rf" data-val="palmier">palmier</button>
-          <button class="chip chip--rf" data-val="forêt">forêt</button>
+        <!-- Chips mode arbres -->
+        <div class="chips-group" id="chipsTrees">
+          <span class="chips-label" style="color:#22c55e">🌳 Arbres :</span>
+          <button class="chip chip--tree" data-val="">tous</button>
+          <button class="chip chip--tree" data-val="acacia">Acacia</button>
+          <button class="chip chip--tree" data-val="mango">Mango</button>
+          <button class="chip chip--tree" data-val="olive">Olive</button>
+          <button class="chip chip--tree" data-val="palm">Palm</button>
+        </div>
+
+        <!-- Chips mode maladies -->
+        <div class="chips-group" id="chipsDiseases">
+          <span class="chips-label" style="color:#f87171">🦠 Maladies :</span>
+          <button class="chip chip--disease" data-val="">toutes</button>
+          <button class="chip chip--disease" data-val="anthracnose">Anthracnose</button>
+          <button class="chip chip--disease" data-val="powdery">Powdery Mildew</button>
+          <button class="chip chip--disease" data-val="fusarium">Fusarium Wilt</button>
+          <button class="chip chip--disease" data-val="blight">Leaf Blight</button>
+          <button class="chip chip--disease" data-val="knot">Olive Knot</button>
+          <button class="chip chip--disease" data-val="spot">Leaf Spot</button>
         </div>
 
         <!-- Slider confiance -->
@@ -225,14 +359,7 @@
             <span class="conf-value" id="confValue">25%</span>
           </div>
         </div>
-
-        <!-- Indicateur de mode -->
-        <div class="mode-indicator" id="modeIndicator">
-          <span class="mode-dot mode-dot--all"></span>
-          <span id="modeText">Mode : détection de <strong>tous les objets</strong></span>
-        </div>
-
-      </div><!-- /search-section -->
+      </div>
 
       <!-- Bouton détecter -->
       <button class="btn-detect" id="btnDetect" disabled>
@@ -255,11 +382,9 @@
         </div>
       </div>
 
-      <!-- Statut -->
       <p class="status-msg" id="statusMsg" aria-live="polite"></p>
 
     </div><!-- /panel--upload -->
-
 
     <!-- ══ COLONNE DROITE ══ -->
     <div class="panel panel--result">
@@ -318,10 +443,9 @@
   <footer class="site-footer">
     <p>Système Intelligent d'Annotation d'Images — <strong>YOLOv8 + FastAPI</strong> — Projet Universitaire 2024</p>
     <p class="footer-tech">
-      <span>Python</span><span>FastAPI</span><span>Ultralytics</span><span>OpenCV</span><span>Roboflow</span>
+      <span>Python</span><span>FastAPI</span><span>Ultralytics</span><span>OpenCV</span>
     </p>
   </footer>
-
 
   <script>
     // ── Références DOM ──────────────────────────────────────────
@@ -341,15 +465,10 @@
     const searchClear = document.getElementById("searchClear");
     const confSlider = document.getElementById("confSlider");
     const confValue = document.getElementById("confValue");
-    const modeIndicator = document.getElementById("modeIndicator");
-    const modeText = document.getElementById("modeText");
-    const chips = document.querySelectorAll(".chip");
-
     const mainAnswer = document.getElementById("mainAnswer");
     const mainAnswerIcon = document.getElementById("mainAnswerIcon");
     const mainAnswerTitle = document.getElementById("mainAnswerTitle");
     const mainAnswerSub = document.getElementById("mainAnswerSub");
-
     const resultImg = document.getElementById("resultImg");
     const resultPlaceholder = document.getElementById("resultPlaceholder");
     const resultActions = document.getElementById("resultActions");
@@ -362,14 +481,15 @@
     const detectionCount = document.getElementById("detectionCount");
     const detectionsList = document.getElementById("detectionsList");
     const detectionsUl = document.getElementById("detectionsUl");
+    const modeBtns = document.querySelectorAll(".mode-btn");
+    const chips = document.querySelectorAll(".chip");
 
     // ── État ────────────────────────────────────────────────────
     let selectedFile = null;
     let originalSrc = null;
     let annotatedSrc = null;
     let compareMode = false;
-
-    const TREE_KEYWORDS = ["arbre", "arbres", "tree", "trees", "palmier", "forêt", "forest", "sapin", "pin", "chêne"];
+    let currentMode = "general";   // "general" | "trees" | "diseases"
 
     // ── Utilitaires ─────────────────────────────────────────────
     const show = el => el.classList.remove("hidden");
@@ -392,28 +512,31 @@
       setTimeout(() => hide(progressWrap), 600);
     }
 
-    // ── Indicateur de mode ──────────────────────────────────────
-    function updateMode() {
-      const val = targetInput.value.trim();
-      const dot = modeIndicator.querySelector(".mode-dot");
+    // ── Changement de mode ──────────────────────────────────────
+    function setMode(mode) {
+      currentMode = mode;
 
-      if (!val) {
-        dot.className = "mode-dot mode-dot--all";
-        modeText.innerHTML = `Mode : détection de <strong>tous les objets</strong>`;
-        hide(searchClear);
-        return;
-      }
+      // Mettre à jour les boutons
+      modeBtns.forEach(btn => btn.classList.remove("active"));
+      document.querySelector(`[data-mode="${mode}"]`).classList.add("active");
 
-      show(searchClear);
-      const isTree = TREE_KEYWORDS.some(kw => val.toLowerCase().includes(kw));
+      // Afficher les chips correspondants
+      document.getElementById("chipsGeneral").classList.toggle("active", mode === "general");
+      document.getElementById("chipsTrees").classList.toggle("active", mode === "trees");
+      document.getElementById("chipsDiseases").classList.toggle("active", mode === "diseases");
 
-      if (isTree) {
-        dot.className = "mode-dot mode-dot--rf";
-        modeText.innerHTML = `Mode : <span style="color:#fb923c">🌳 Roboflow</span> — détection d'arbres`;
-      } else {
-        dot.className = "mode-dot mode-dot--target";
-        modeText.innerHTML = `Mode : YOLO — recherche de <strong>« ${val} »</strong>`;
-      }
+      // Réinitialiser le champ de recherche
+      targetInput.value = "";
+      chips.forEach(c => c.classList.remove("chip--active"));
+      hide(searchClear);
+
+      // Mettre à jour le placeholder
+      const placeholders = {
+        general: "Ex : voiture, chien, car, person…",
+        trees: "Ex : palm, acacia, mango, olive…",
+        diseases: "Ex : anthracnose, blight, fusarium…",
+      };
+      targetInput.placeholder = placeholders[mode];
     }
 
     // ── Chargement fichier ──────────────────────────────────────
@@ -426,11 +549,7 @@
       fileSize.textContent = fmt(file.size);
       show(fileInfo);
       const reader = new FileReader();
-      reader.onload = e => {
-        previewImg.src = e.target.result;
-        show(previewImg);
-        hide(dropPlaceholder);
-      };
+      reader.onload = e => { previewImg.src = e.target.result; show(previewImg); hide(dropPlaceholder); };
       reader.readAsDataURL(file);
       btnDetect.disabled = false;
       setStatus("Image prête. Cliquez sur « Détecter les objets ».", "info");
@@ -460,10 +579,11 @@
       const conf = parseInt(confSlider.value) / 100;
 
       mainAnswer.style.display = "none";
-      setStatus(target ? `⏳ Recherche de « ${target} »…` : "⏳ Analyse en cours…", "info");
+      setStatus(`⏳ Analyse en cours (mode : ${currentMode})…`, "info");
 
       const formData = new FormData();
       formData.append("file", selectedFile);
+      formData.append("mode", currentMode);
       formData.append("target", target);
       formData.append("confidence", conf.toString());
 
@@ -491,38 +611,31 @@
     function showAnswer(data) {
       mainAnswer.style.display = "none";
 
-      // Pas de cible → statut simple
       if (!data.target_input || data.target_input.trim() === "") {
-        setStatus(`✅ ${data.count} objet(s) détecté(s) en ${data.inference_time}s`, "success");
+        const modeLabel = { general: "Général", trees: "Arbres", diseases: "Maladies" }[data.mode] || data.mode;
+        setStatus(`✅ ${data.count} objet(s) détecté(s) en ${data.inference_time}s — mode ${modeLabel}`, "success");
         return;
       }
 
       const nom = data.target_input;
-
       if (data.found_target === true) {
         const nb = data.count;
         const confs = data.detections.map(d => (d.confidence * 100).toFixed(0));
         const confMax = Math.max(...confs);
-        const src = data.mode === "roboflow" ? " · 🌳 Roboflow" : " · YOLO";
-
         mainAnswerIcon.textContent = "✅";
         mainAnswerTitle.textContent = `OUI — « ${nom} » est dans l'image`;
-        mainAnswerSub.innerHTML = `${nb} détection(s) · confiance ${confMax}%${src}`;
+        mainAnswerSub.innerHTML = `${nb} détection(s) · confiance ${confMax}%`;
         mainAnswer.className = "main-answer found";
         mainAnswer.style.display = "flex";
-
         setStatus(`✅ « ${nom} » trouvé — ${nb} détection(s)`, "success");
-
       } else {
         mainAnswerIcon.textContent = "❌";
         mainAnswerTitle.textContent = `NON — « ${nom} » n'est pas dans l'image`;
         mainAnswerSub.innerHTML = `Essayez un seuil plus bas ou vérifiez l'orthographe`;
         mainAnswer.className = "main-answer notfound";
         mainAnswer.style.display = "flex";
-
         setStatus(`❌ « ${nom} » non trouvé`, "error");
       }
-
       mainAnswer.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
@@ -550,7 +663,6 @@
       detectionCount.textContent = `${data.count} objet${data.count > 1 ? "s" : ""}`;
       show(detectionCount);
 
-      // Liste groupée
       detectionsUl.innerHTML = "";
       if (!data.detections.length) {
         detectionsUl.innerHTML = "<li class='det-item det-empty'>Aucune détection.</li>";
@@ -574,12 +686,17 @@
       }
       show(detectionsList);
 
-      const resultFilename = data.result_url.split("/").pop();
-      btnDownload.href = `/download/${resultFilename}`;
+      btnDownload.href = `/download/${data.result_url.split("/").pop()}`;
       show(resultActions);
     }
 
     // ── Événements ──────────────────────────────────────────────
+    // Boutons de mode
+    modeBtns.forEach(btn => {
+      btn.addEventListener("click", () => setMode(btn.dataset.mode));
+    });
+
+    // Drag & drop
     dropZone.addEventListener("click", () => fileInput.click());
     dropZone.addEventListener("keypress", e => { if (e.key === "Enter" || e.key === " ") fileInput.click(); });
     fileInput.addEventListener("change", e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
@@ -600,12 +717,14 @@
       btnCompare.textContent = compareMode ? "⇄ Annoté" : "⇄ Comparer";
     });
 
-    targetInput.addEventListener("input", updateMode);
+    targetInput.addEventListener("input", () => {
+      targetInput.value.trim() ? show(searchClear) : hide(searchClear);
+    });
     targetInput.addEventListener("keydown", e => { if (e.key === "Enter" && selectedFile) detectObjects(); });
 
     searchClear.addEventListener("click", () => {
       targetInput.value = "";
-      updateMode();
+      hide(searchClear);
       chips.forEach(c => c.classList.remove("chip--active"));
       targetInput.focus();
     });
@@ -616,12 +735,13 @@
         chips.forEach(c => c.classList.remove("chip--active"));
         if (isActive) {
           targetInput.value = "";
+          hide(searchClear);
         } else {
           chip.classList.add("chip--active");
           targetInput.value = chip.dataset.val;
+          chip.dataset.val ? show(searchClear) : hide(searchClear);
         }
-        updateMode();
-        if (selectedFile && !isActive) detectObjects();
+        if (selectedFile && !isActive && chip.dataset.val) detectObjects();
       });
     });
 
